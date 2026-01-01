@@ -1,0 +1,6 @@
+EuroBondExample:
+  par_value: 1000
+  coupon_rate: 4.5
+  coupon_frequency: 2
+  issue_date: "15/03/2020"
+  maturity_date: "15/03/2030"
