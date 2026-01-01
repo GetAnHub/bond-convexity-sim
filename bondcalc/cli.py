@@ -9,7 +9,7 @@ from typing import Dict, Tuple
 
 from .analytics import calculate_ytm_from_bond_data, compute_periods
 from .models import AnalysisRequest, AnalysisResult, Bond
-from .plotting import plot_price_yield_curve
+from .plotting import plot_price_yield_curve, plot_price_yield_derivative
 
 DATE_FORMAT = "%d/%m/%Y"
 
@@ -91,6 +91,8 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--num-points", type=int, default=100, help="Number of price points for plotting")
     analyze.add_argument("--plot", action="store_true", help="Display the price-yield curve")
     analyze.add_argument("--save-plot", type=Path, help="Save plot to file")
+    analyze.add_argument("--plot-derivative", action="store_true", help="Display the first derivative of the price-yield curve")
+    analyze.add_argument("--save-derivative", type=Path, help="Save derivative plot to file")
     return parser
 
 
@@ -138,6 +140,24 @@ def main(argv: Tuple[str, ...] | None = None):
                 curve_plot = curve.plot(x="ytm", y="price", title=f"Price-Yield Curve: {bond.name}")
                 fig = curve_plot.get_figure()
                 fig.savefig(args.save_plot)
+        if result.curve is not None and (args.plot_derivative or args.save_derivative):
+            periods = compute_periods(bond.maturity_date, request.purchase_date, bond.coupon_frequency)
+            derivative = plot_price_yield_derivative(
+                bond.par_value,
+                bond.coupon_rate,
+                periods,
+                bond.coupon_frequency,
+                request.min_price,
+                request.max_price,
+                request.num_points,
+                show=args.plot_derivative,
+            )
+            if args.save_derivative:
+                derivative_plot = derivative.plot(
+                    x="ytm", y="price_derivative", title=f"Price-Yield Derivative: {bond.name}"
+                )
+                fig = derivative_plot.get_figure()
+                fig.savefig(args.save_derivative)
     return 0
 
 

@@ -28,6 +28,40 @@ def _ensure_pandas():
         raise RuntimeError("pandas is required for curve generation") from exc
 
 
+def calculate_price_yield_derivative(curve):
+    pd = _ensure_pandas()
+    if curve is None or getattr(curve, "empty", True):
+        return pd.DataFrame(columns=["ytm", "price_derivative"])
+
+    cleaned_curve = (
+        curve[["ytm", "price"]]
+        .replace([math.inf, -math.inf], math.nan)
+        .dropna()
+        .sort_values("ytm")
+        .drop_duplicates(subset="ytm")
+    )
+    if cleaned_curve.empty or len(cleaned_curve.index) < 2:
+        return pd.DataFrame(columns=["ytm", "price_derivative"])
+
+    ytms = list(cleaned_curve["ytm"].tolist())
+    prices = list(cleaned_curve["price"].tolist())
+    derivatives = []
+    for idx in range(len(ytms)):
+        if idx == 0:
+            delta_ytm = ytms[1] - ytms[0]
+            delta_price = prices[1] - prices[0]
+        elif idx == len(ytms) - 1:
+            delta_ytm = ytms[-1] - ytms[-2]
+            delta_price = prices[-1] - prices[-2]
+        else:
+            delta_ytm = ytms[idx + 1] - ytms[idx - 1]
+            delta_price = prices[idx + 1] - prices[idx - 1]
+
+        derivative = math.nan if delta_ytm == 0 else delta_price / delta_ytm
+        derivatives.append(derivative)
+    return pd.DataFrame({"ytm": ytms, "price_derivative": derivatives})
+
+
 def generate_price_yield_curve(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points=100):
     prices, ytms = calculate_ytm_range(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points)
     pd = _ensure_pandas()
@@ -57,3 +91,27 @@ def plot_price_yield_curve(par_value, coupon_rate, periods, coupon_frequency, mi
     if show:
         plt.show()
     return curve
+
+
+def plot_price_yield_derivative(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points=100, show=True, ax=None):
+    curve = generate_price_yield_curve(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points)
+    derivative = calculate_price_yield_derivative(curve)
+    if derivative.empty:
+        return derivative
+
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError as exc:
+        raise RuntimeError("matplotlib is required for plotting") from exc
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(derivative["ytm"], derivative["price_derivative"], label="dPrice/dYTM", color="orange")
+    ax.set_xlabel("Yield to Maturity (%)")
+    ax.set_ylabel("Price Sensitivity")
+    ax.set_title("First Derivative of Price-Yield Curve")
+    ax.grid(True)
+    ax.legend()
+    if show:
+        plt.show()
+    return derivative

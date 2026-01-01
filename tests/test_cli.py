@@ -20,6 +20,9 @@ def test_argument_parsing():
     assert args.command == "analyze"
     assert args.bond_name == "test-bond"
     assert args.price == 99
+    assert args.plot is False
+    assert args.plot_derivative is False
+    assert args.save_derivative is None
 
 
 def test_analyze_bond_flow(tmp_path):

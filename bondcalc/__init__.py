@@ -9,7 +9,13 @@ from .analytics import (
     compute_periods,
     generate_cash_flows,
 )
-from .plotting import calculate_ytm_range, generate_price_yield_curve, plot_price_yield_curve
+from .plotting import (
+    calculate_price_yield_derivative,
+    calculate_ytm_range,
+    generate_price_yield_curve,
+    plot_price_yield_curve,
+    plot_price_yield_derivative,
+)
 
 __all__ = [
     "Bond",
@@ -25,4 +31,6 @@ __all__ = [
     "calculate_ytm_range",
     "generate_price_yield_curve",
     "plot_price_yield_curve",
+    "calculate_price_yield_derivative",
+    "plot_price_yield_derivative",
 ]
