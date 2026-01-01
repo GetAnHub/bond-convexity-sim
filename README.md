@@ -36,15 +36,19 @@ EuroBondExample:
   maturity_date: "15/03/2030"
 ```
 
-You can point the CLI at this file and request analytics and a price–yield curve:
+You can point the CLI at this file and request analytics, a price–yield curve, and its first derivative:
 
 ```bash
 python -m bondcalc analyze EuroBondExample \
   --bonds tests/data/sample_bond.yaml \
   --price 980 \
   --purchase-date 15/03/2025 \
-  --min-price 950 --max-price 1050 --num-points 50 --plot
+  --min-price 950 --max-price 1050 --num-points 50 --plot --plot-derivative
 ```
+
+The derivative plot is computed from the simulated curve points using finite differences,
+so you can visualize how sensitive price is to small changes in yield even without a
+closed-form expression.
 
 If you prefer JSON inputs, supply a `bonds.json` file with the same structure and omit
 the YAML-specific dependency. For a quick sanity check of the codebase, run:
