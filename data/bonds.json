@@ -1,14 +1,14 @@
 {
   "EuroBondExample": {
     "par_value": 1000,
-    "coupon_rate": 4.5,
-    "coupon_frequency": 2,
+    "coupon_rate": 2.1,
+    "coupon_frequency": 1,
     "issue_date": "15/03/2020",
-    "purchase_date": "15/03/2025",
-    "maturity_date": "15/03/2030",
+    "purchase_date": "15/03/2024",
+    "maturity_date": "21/03/2117",
     "price": 980,
-    "min_price": 950,
-    "max_price": 1050,
+    "min_price": 250,
+    "max_price": 1250,
     "num_points": 50
   },
   "US-Treasury-5Y": {
