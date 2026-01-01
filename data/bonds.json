@@ -1,26 +1,26 @@
 {
-  "EuroBondExample": {
+  "Btp Tf 2,45% St33 Eur": {
     "par_value": 1000,
-    "coupon_rate": 2.1,
-    "coupon_frequency": 1,
-    "issue_date": "15/03/2020",
-    "purchase_date": "15/03/2024",
+    "coupon_rate": 2.45,
+    "coupon_frequency": 2,
+    "issue_date": "01/09/2016",
+    "purchase_date": "01/01/2026",
     "maturity_date": "21/03/2117",
-    "price": 980,
-    "min_price": 250,
-    "max_price": 1250,
+    "price": 950.4,
+    "min_price": 700,
+    "max_price": 1100,
     "num_points": 50
   },
-  "US-Treasury-5Y": {
+  "Austria Tf 2,1% St2117 Eur": {
     "par_value": 1000,
-    "coupon_rate": 3.25,
+    "coupon_rate": 2.1,
     "coupon_frequency": 2,
-    "issue_date": "01/07/2022",
-    "purchase_date": "01/07/2024",
-    "maturity_date": "01/07/2027",
-    "price": 1015,
-    "min_price": 980,
-    "max_price": 1045,
+    "issue_date": "20/09/2017",
+    "purchase_date": "01/01/2026",
+    "maturity_date": "20/09/2117",
+    "price": 576.1,
+    "min_price": 300,
+    "max_price": 1800,
     "num_points": 60
   },
   "Green-Bond-2035": {
