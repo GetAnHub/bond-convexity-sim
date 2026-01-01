@@ -1,0 +1,38 @@
+{
+  "EuroBondExample": {
+    "par_value": 1000,
+    "coupon_rate": 4.5,
+    "coupon_frequency": 2,
+    "issue_date": "15/03/2020",
+    "purchase_date": "15/03/2025",
+    "maturity_date": "15/03/2030",
+    "price": 980,
+    "min_price": 950,
+    "max_price": 1050,
+    "num_points": 50
+  },
+  "US-Treasury-5Y": {
+    "par_value": 1000,
+    "coupon_rate": 3.25,
+    "coupon_frequency": 2,
+    "issue_date": "01/07/2022",
+    "purchase_date": "01/07/2024",
+    "maturity_date": "01/07/2027",
+    "price": 1015,
+    "min_price": 980,
+    "max_price": 1045,
+    "num_points": 60
+  },
+  "Green-Bond-2035": {
+    "par_value": 500,
+    "coupon_rate": 2.1,
+    "coupon_frequency": 1,
+    "issue_date": "10/01/2023",
+    "purchase_date": "10/01/2026",
+    "maturity_date": "10/01/2035",
+    "price": 470,
+    "min_price": 440,
+    "max_price": 520,
+    "num_points": 55
+  }
+}
