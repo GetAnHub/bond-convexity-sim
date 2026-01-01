@@ -177,14 +177,27 @@
       }
 
       let curveChart, derivativeChart;
+      function toPoints(xs, ys) {
+        const points = [];
+        xs.forEach((x, idx) => {
+          const xv = Number(x);
+          const yv = Number(ys[idx]);
+          if (Number.isFinite(xv) && Number.isFinite(yv)) {
+            points.push({ x: xv, y: yv });
+          }
+        });
+        return points;
+      }
+
       function renderCharts(curve, derivative) {
         const ctx = document.getElementById('curve-chart');
         const dctx = document.getElementById('derivative-chart');
+        const curvePoints = toPoints(curve.ytm, curve.price);
+        const derivativePoints = toPoints(derivative.ytm, derivative.price_derivative);
         const curveData = {
-          labels: curve.ytm,
           datasets: [{
             label: 'Price',
-            data: curve.price,
+            data: curvePoints,
             borderColor: '#22c55e',
             backgroundColor: 'rgba(34,197,94,0.15)',
             tension: 0.3,
@@ -192,10 +205,9 @@
           }]
         };
         const derivativeData = {
-          labels: derivative.ytm,
           datasets: [{
             label: 'dPrice/dYTM',
-            data: derivative.price_derivative,
+            data: derivativePoints,
             borderColor: '#f59e0b',
             backgroundColor: 'rgba(245,158,11,0.15)',
             tension: 0.2,
@@ -204,8 +216,14 @@
         };
         const options = {
           responsive: true,
+          parsing: false,
           scales: {
-            x: { title: { display: true, text: 'Yield to Maturity (%)', color: '#0f172a' }, ticks: { color: '#0f172a' }, grid: { color: '#e2e8f0' } },
+            x: {
+              type: 'linear',
+              title: { display: true, text: 'Yield to Maturity (%)', color: '#0f172a' },
+              ticks: { color: '#0f172a', callback: (value) => Number(value).toFixed(2) },
+              grid: { color: '#e2e8f0' },
+            },
             y: { ticks: { color: '#0f172a' }, grid: { color: '#e2e8f0' } }
           },
           plugins: { legend: { labels: { color: '#0f172a' } } }
