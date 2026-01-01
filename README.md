@@ -1,6 +1,21 @@
 # bond-convexity-sim
 A tool to view and analyze the convexity of a bond.
 
+## Quick start
+1. Create and activate a virtual environment (optional but recommended):
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+2. Install the runtime dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   * `pandas` for generating price–yield curve dataframes
+   * `matplotlib` for optional plotting
+   * `PyYAML` for loading YAML bond definitions (JSON works out-of-the-box)
+3. Run analytics through the CLI (see example below). Use `pip install pytest` if you want to execute the test suite.
+
 ## Contributing notes
 The project avoids committing binary artifacts (images, spreadsheets, notebooks) so the
 GitHub-style PR flow in this environment remains compatible. If you need to surface
@@ -29,4 +44,11 @@ python -m bondcalc analyze EuroBondExample \
   --price 980 \
   --purchase-date 15/03/2025 \
   --min-price 950 --max-price 1050 --num-points 50 --plot
+```
+
+If you prefer JSON inputs, supply a `bonds.json` file with the same structure and omit
+the YAML-specific dependency. For a quick sanity check of the codebase, run:
+
+```bash
+pytest -q
 ```
