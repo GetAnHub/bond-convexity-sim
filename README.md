@@ -13,8 +13,22 @@ A tool to view and analyze the convexity of a bond.
    ```
    * `pandas` for generating price–yield curve dataframes
    * `matplotlib` for optional plotting
+   * `Flask` for the local web experience
    * `PyYAML` for loading YAML bond definitions (JSON works out-of-the-box)
 3. Run analytics through the CLI (see example below). Use `pip install pytest` if you want to execute the test suite.
+
+## Web UI
+Launch a modern single-page experience to explore price–yield curves and their derivatives:
+
+```bash
+python app.py
+```
+
+Then open http://localhost:5000/ in your browser. The interface lets you either:
+- Select a saved bond from `data/bonds.json` using a drop-down picklist, or
+- Manually fill in bond inputs (par value, coupon details, price, and date fields) and plot the resulting curves.
+
+Outputs include a summary of the computed bond details plus interactive charts for the price–yield curve and its first derivative.
 
 ## Contributing notes
 The project avoids committing binary artifacts (images, spreadsheets, notebooks) so the
