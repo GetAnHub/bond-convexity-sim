@@ -63,11 +63,26 @@ def calculate_price_yield_derivative(curve):
 
 
 def generate_price_yield_curve(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points=100):
-    prices, ytms = calculate_ytm_range(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points)
+    prices, ytms = calculate_ytm_range(
+        par_value,
+        coupon_rate,
+        periods,
+        coupon_frequency,
+        min_price,
+        max_price,
+        num_points,
+    )
     pd = _ensure_pandas()
     if prices is None or ytms is None:
         return pd.DataFrame(columns=["ytm", "price"])
-    return pd.DataFrame({"ytm": ytms, "price": prices})
+    return (
+        pd.DataFrame({"ytm": ytms, "price": prices})
+        .replace([math.inf, -math.inf], math.nan)
+        .dropna()
+        .sort_values("ytm")
+        .drop_duplicates(subset="ytm")
+        .reset_index(drop=True)
+    )
 
 
 def plot_price_yield_curve(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points=100, show=True, ax=None):

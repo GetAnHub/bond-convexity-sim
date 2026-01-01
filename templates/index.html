@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bond Convexity Explorer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      body { background: #f8fafc; color: #0f172a; }
+      .card { background: #ffffff; border: 1px solid #e2e8f0; }
+      .form-control, .form-select { background: #ffffff; color: #0f172a; border-color: #cbd5e1; }
+      .navbar { background: #ffffff; border-bottom: 1px solid #e2e8f0; }
+      .text-muted { color: #475569 !important; }
+      .badge { background: #2563eb; }
+      canvas { background: #ffffff; border-radius: 12px; }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg mb-4 shadow-sm">
+      <div class="container-fluid">
+        <a class="navbar-brand text-dark" href="#">Bond Convexity Explorer</a>
+        <span class="text-muted small">Interactive yield/price sandbox</span>
+      </div>
+    </nav>
+
+    <div class="container pb-5">
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title mb-3">Choose a saved bond</h5>
+              <p class="text-muted small">Use one of the JSON-defined bonds or fill in the form manually.</p>
+              <select id="bond-picker" class="form-select mb-3"></select>
+              <button class="btn btn-primary w-100" id="load-bond">Load bond into form</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-8">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title mb-3">Bond inputs</h5>
+              <form id="bond-form" class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Par value</label>
+                  <input type="number" step="0.01" class="form-control" name="par_value" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Coupon rate (%)</label>
+                  <input type="number" step="0.01" class="form-control" name="coupon_rate" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Coupon frequency (per year)</label>
+                  <input type="number" class="form-control" name="coupon_frequency" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Purchase price</label>
+                  <input type="number" step="0.01" class="form-control" name="price" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Issue date (DD/MM/YYYY)</label>
+                  <input type="text" class="form-control" name="issue_date" placeholder="15/03/2020" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Purchase date</label>
+                  <input type="text" class="form-control" name="purchase_date" placeholder="15/03/2025" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Maturity date</label>
+                  <input type="text" class="form-control" name="maturity_date" placeholder="15/03/2030" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Min price (curve)</label>
+                  <input type="number" step="0.01" class="form-control" name="min_price" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Max price (curve)</label>
+                  <input type="number" step="0.01" class="form-control" name="max_price" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Number of curve points</label>
+                  <input type="number" class="form-control" name="num_points" value="50" required>
+                </div>
+                <div class="col-12">
+                  <button class="btn btn-success" type="submit">Run analysis</button>
+                </div>
+              </form>
+              <div id="alert-container" class="mt-3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 mt-1">
+        <div class="col-lg-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title mb-3">Bond snapshot</h5>
+              <dl class="row" id="summary"></dl>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-8">
+          <div class="card shadow-sm mb-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Price vs. yield</h6>
+                <span class="badge">Curve</span>
+              </div>
+              <canvas id="curve-chart" height="180"></canvas>
+            </div>
+          </div>
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Yield sensitivity</h6>
+                <span class="badge">First derivative</span>
+              </div>
+              <canvas id="derivative-chart" height="180"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const bonds = {{ bonds | tojson }};
+      const picker = document.getElementById('bond-picker');
+      const form = document.getElementById('bond-form');
+      const summary = document.getElementById('summary');
+      const alertContainer = document.getElementById('alert-container');
+
+      function populatePicker() {
+        picker.innerHTML = '';
+        Object.keys(bonds).forEach((name, idx) => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          if (idx === 0) option.selected = true;
+          picker.appendChild(option);
+        });
+      }
+
+      function fillForm(bond) {
+        if (!bond) return;
+        Object.entries(bond).forEach(([key, value]) => {
+          const input = form.elements.namedItem(key);
+          if (input) input.value = value;
+        });
+      }
+
+      function showAlert(message, type = 'danger') {
+        alertContainer.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+      }
+
+      function renderSummary(data) {
+        const items = [
+          ['Par value', data.par_value],
+          ['Coupon rate', `${data.coupon_rate}%`],
+          ['Frequency', `${data.coupon_frequency}x/year`],
+          ['Issue date', data.issue_date],
+          ['Purchase date', data.purchase_date],
+          ['Maturity', data.maturity_date],
+          ['Purchase price', data.price],
+          ['Accrued interest', data.accrued_interest?.toFixed ? data.accrued_interest.toFixed(2) : data.accrued_interest],
+          ['Yield to maturity', data.ytm?.toFixed ? `${data.ytm.toFixed(3)}%` : data.ytm],
+          ['Curve span', `${data.min_price}–${data.max_price}`],
+          ['Curve points', data.num_points],
+          ['Periods', data.periods],
+        ];
+        summary.innerHTML = items.map(([label, value]) => `
+          <dt class="col-6 text-muted">${label}</dt>
+          <dd class="col-6">${value ?? '—'}</dd>
+        `).join('');
+      }
+
+      let curveChart, derivativeChart;
+      function renderCharts(curve, derivative) {
+        const ctx = document.getElementById('curve-chart');
+        const dctx = document.getElementById('derivative-chart');
+        const curveData = {
+          labels: curve.ytm.map((value) => Number.parseFloat(value).toFixed(2)),
+          datasets: [{
+            label: 'Price',
+            data: curve.price,
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34,197,94,0.15)',
+            tension: 0.3,
+            fill: true,
+          }]
+        };
+        const derivativeData = {
+          labels: derivative.ytm.map((value) => Number.parseFloat(value).toFixed(2)),
+          datasets: [{
+            label: 'dPrice/dYTM',
+            data: derivative.price_derivative,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245,158,11,0.15)',
+            tension: 0.2,
+            fill: true,
+          }]
+        };
+        const tickFormatter = (value) => {
+          const numericValue = Number(value);
+          return Number.isFinite(numericValue) ? numericValue.toFixed(2) : value;
+        };
+
+        const options = {
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: 'Yield to Maturity (%)', color: '#0f172a' }, ticks: { color: '#0f172a', callback: tickFormatter }, grid: { color: '#e2e8f0' } },
+            y: { ticks: { color: '#0f172a' }, grid: { color: '#e2e8f0' } }
+          },
+          plugins: { legend: { labels: { color: '#0f172a' } } }
+        };
+        if (curveChart) curveChart.destroy();
+        if (derivativeChart) derivativeChart.destroy();
+        curveChart = new Chart(ctx, { type: 'line', data: curveData, options });
+        derivativeChart = new Chart(dctx, { type: 'line', data: derivativeData, options });
+      }
+
+      document.getElementById('load-bond').addEventListener('click', () => {
+        const bond = bonds[picker.value];
+        fillForm(bond);
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = Object.fromEntries(new FormData(form).entries());
+        try {
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData),
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            showAlert(payload.error || 'Unable to compute analysis');
+            return;
+          }
+          alertContainer.innerHTML = '';
+          renderSummary(payload.summary);
+          renderCharts(payload.curve, payload.derivative);
+        } catch (err) {
+          showAlert('Something went wrong while reaching the API.');
+        }
+      });
+
+      populatePicker();
+      fillForm(bonds[picker.value]);
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
