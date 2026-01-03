@@ -23,6 +23,12 @@ def bond_price(par_value: float, coupon_rate: float, periods: int, ytm: float, c
         coupon_rate = float(coupon_rate)
         ytm = float(ytm)
         coupon = (coupon_rate / 100) * par_value / coupon_frequency
+
+        # Handle the zero-yield edge case to avoid dividing by zero while
+        # preserving the limit price where discounting disappears.
+        if abs(ytm) < 1e-12:
+            return coupon * periods + par_value
+
         discount_factor = 1 / (1 + ytm / coupon_frequency)
         coupon_pv = coupon * (1 - discount_factor ** periods) / (ytm / coupon_frequency)
         par_pv = par_value * discount_factor ** periods
