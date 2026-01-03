@@ -143,6 +143,9 @@
       const barLabelPlugin = {
         id: 'barLabel',
         afterDatasetsDraw(chart, args, opts) {
+          // Only render labels for bar charts to avoid showing objects on line plots
+          if (chart.config.type !== 'bar') return;
+
           const { ctx } = chart;
           ctx.save();
           const formatter = opts.formatter || ((value) => value);
