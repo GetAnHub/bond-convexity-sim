@@ -121,6 +121,15 @@
               <canvas id="derivative-chart" height="180"></canvas>
             </div>
           </div>
+          <div class="card shadow-sm mt-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Price change vs. yield</h6>
+                <span class="badge">Relative delta</span>
+              </div>
+              <canvas id="price-change-chart" height="200"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -131,6 +140,31 @@
       const form = document.getElementById('bond-form');
       const summary = document.getElementById('summary');
       const alertContainer = document.getElementById('alert-container');
+      const barLabelPlugin = {
+        id: 'barLabel',
+        afterDatasetsDraw(chart, args, opts) {
+          // Only render labels for bar charts to avoid showing objects on line plots
+          if (chart.config.type !== 'bar') return;
+
+          const { ctx } = chart;
+          ctx.save();
+          const formatter = opts.formatter || ((value) => value);
+          chart.data.datasets.forEach((dataset, datasetIndex) => {
+            const meta = chart.getDatasetMeta(datasetIndex);
+            meta.data.forEach((element, idx) => {
+              const value = dataset.data[idx];
+              const label = formatter(value, idx, dataset);
+              ctx.fillStyle = '#0f172a';
+              ctx.font = '11px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(label, element.x, element.y - 4);
+            });
+          });
+          ctx.restore();
+        },
+      };
+      Chart.register(barLabelPlugin);
 
       function populatePicker() {
         picker.innerHTML = '';
@@ -176,7 +210,7 @@
         `).join('');
       }
 
-      let curveChart, derivativeChart;
+      let curveChart, derivativeChart, priceChangeChart;
       function toPoints(xs, ys) {
         const points = [];
         xs.forEach((x, idx) => {
@@ -234,6 +268,54 @@
         derivativeChart = new Chart(dctx, { type: 'line', data: derivativeData, options });
       }
 
+      function renderPriceChange(changeData) {
+        const bctx = document.getElementById('price-change-chart');
+        const labels = (changeData?.ytm || []).map((ytm) => `${Number(ytm).toFixed(0)}%`);
+        const deltas = changeData?.price_change_pct || [];
+
+        const dataset = {
+          label: 'Price change vs. current yield',
+          data: deltas,
+          backgroundColor: (context) => {
+            const value = Number(context.raw);
+            return Number.isFinite(value) && value >= 0 ? 'rgba(34,197,94,0.65)' : 'rgba(239,68,68,0.65)';
+          },
+          borderColor: (context) => {
+            const value = Number(context.raw);
+            return Number.isFinite(value) && value >= 0 ? '#16a34a' : '#dc2626';
+          },
+          borderWidth: 1,
+        };
+
+        const options = {
+          responsive: true,
+          scales: {
+            x: {
+              title: { display: true, text: 'Yield to Maturity (%)', color: '#0f172a' },
+              ticks: { color: '#0f172a' },
+              grid: { color: '#e2e8f0' },
+            },
+            y: {
+              title: { display: true, text: 'Price change (%)', color: '#0f172a' },
+              ticks: { color: '#0f172a', callback: (value) => `${value.toFixed(1)}%` },
+              grid: { color: '#e2e8f0' },
+            },
+          },
+          plugins: {
+            legend: { labels: { color: '#0f172a' } },
+            barLabel: {
+              formatter: (value) => {
+                if (!Number.isFinite(value)) return '—';
+                return `${value.toFixed(2)}%`;
+              },
+            },
+          },
+        };
+
+        if (priceChangeChart) priceChangeChart.destroy();
+        priceChangeChart = new Chart(bctx, { type: 'bar', data: { labels, datasets: [dataset] }, options });
+      }
+
       document.getElementById('load-bond').addEventListener('click', () => {
         const bond = bonds[picker.value];
         fillForm(bond);
@@ -256,6 +338,7 @@
           alertContainer.innerHTML = '';
           renderSummary(payload.summary);
           renderCharts(payload.curve, payload.derivative);
+          renderPriceChange(payload.price_change);
         } catch (err) {
           showAlert('Something went wrong while reaching the API.');
         }
