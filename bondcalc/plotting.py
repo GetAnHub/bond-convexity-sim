@@ -28,10 +28,30 @@ def _ensure_pandas():
         raise RuntimeError("pandas is required for curve generation") from exc
 
 
-def calculate_price_yield_derivative(curve):
+def _compute_first_derivative(xs, ys):
+    derivatives = []
+    for idx in range(len(xs)):
+        if idx == 0:
+            delta_x = xs[1] - xs[0]
+            delta_y = ys[1] - ys[0]
+        elif idx == len(xs) - 1:
+            delta_x = xs[-1] - xs[-2]
+            delta_y = ys[-1] - ys[-2]
+        else:
+            delta_x = xs[idx + 1] - xs[idx - 1]
+            delta_y = ys[idx + 1] - ys[idx - 1]
+
+        if delta_x == 0 or any(math.isnan(val) for val in (delta_x, delta_y)):
+            derivatives.append(math.nan)
+        else:
+            derivatives.append(delta_y / delta_x)
+    return derivatives
+
+
+def _prepare_clean_curve(curve, columns):
     pd = _ensure_pandas()
     if curve is None or getattr(curve, "empty", True):
-        return pd.DataFrame(columns=["ytm", "price_derivative"])
+        return pd.DataFrame(columns=columns)
 
     cleaned_curve = (
         curve[["ytm", "price"]]
@@ -41,25 +61,64 @@ def calculate_price_yield_derivative(curve):
         .drop_duplicates(subset="ytm")
     )
     if cleaned_curve.empty or len(cleaned_curve.index) < 2:
-        return pd.DataFrame(columns=["ytm", "price_derivative"])
+        return pd.DataFrame(columns=columns)
+    return cleaned_curve.reset_index(drop=True)
+
+
+def calculate_price_yield_derivative(curve):
+    pd = _ensure_pandas()
+    cleaned_curve = _prepare_clean_curve(curve, ["ytm", "price_derivative"])
+    if cleaned_curve.empty:
+        return cleaned_curve
 
     ytms = list(cleaned_curve["ytm"].tolist())
     prices = list(cleaned_curve["price"].tolist())
-    derivatives = []
-    for idx in range(len(ytms)):
-        if idx == 0:
-            delta_ytm = ytms[1] - ytms[0]
-            delta_price = prices[1] - prices[0]
-        elif idx == len(ytms) - 1:
-            delta_ytm = ytms[-1] - ytms[-2]
-            delta_price = prices[-1] - prices[-2]
-        else:
-            delta_ytm = ytms[idx + 1] - ytms[idx - 1]
-            delta_price = prices[idx + 1] - prices[idx - 1]
+    ytms_decimal = [ytm / 100 for ytm in ytms]
+    derivatives_decimal = _compute_first_derivative(ytms_decimal, prices)
+    derivatives_percent = [
+        math.nan if math.isnan(val) else val / 100 for val in derivatives_decimal
+    ]
+    cleaned_curve["price_derivative"] = derivatives_percent
+    return cleaned_curve[["ytm", "price_derivative"]]
 
-        derivative = math.nan if delta_ytm == 0 else delta_price / delta_ytm
-        derivatives.append(derivative)
-    return pd.DataFrame({"ytm": ytms, "price_derivative": derivatives})
+
+def calculate_modified_duration_curve(curve):
+    pd = _ensure_pandas()
+    cleaned_curve = _prepare_clean_curve(curve, ["ytm", "modified_duration"])
+    if cleaned_curve.empty:
+        return cleaned_curve
+
+    ytms_decimal = [ytm / 100 for ytm in cleaned_curve["ytm"].tolist()]
+    prices = cleaned_curve["price"].tolist()
+    first_derivative = _compute_first_derivative(ytms_decimal, prices)
+
+    durations = []
+    for price, d_price in zip(prices, first_derivative):
+        if price in (0, math.inf, -math.inf) or math.isnan(price) or math.isnan(d_price):
+            durations.append(math.nan)
+            continue
+        durations.append(-(d_price / price))
+
+    cleaned_curve["modified_duration"] = durations
+    return cleaned_curve[["ytm", "modified_duration"]]
+
+
+def calculate_convexity_curve(curve):
+    pd = _ensure_pandas()
+    cleaned_curve = _prepare_clean_curve(curve, ["ytm", "convexity"])
+    if cleaned_curve.empty:
+        return cleaned_curve
+
+    ytms_decimal = [ytm / 100 for ytm in cleaned_curve["ytm"].tolist()]
+    prices = cleaned_curve["price"].tolist()
+
+    first_derivative = _compute_first_derivative(ytms_decimal, prices)
+    second_derivative = _compute_first_derivative(ytms_decimal, first_derivative)
+
+    cleaned_curve["convexity"] = [
+        math.nan if math.isnan(val) else val for val in second_derivative
+    ]
+    return cleaned_curve[["ytm", "convexity"]]
 
 
 def generate_price_yield_curve(par_value, coupon_rate, periods, coupon_frequency, min_price, max_price, num_points=100):

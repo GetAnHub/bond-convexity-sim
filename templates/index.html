@@ -124,6 +124,24 @@
           <div class="card shadow-sm mt-4">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Modified duration</h6>
+                <span class="badge">Dₓ (per point)</span>
+              </div>
+              <canvas id="duration-chart" height="180"></canvas>
+            </div>
+          </div>
+          <div class="card shadow-sm mt-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Convexity</h6>
+                <span class="badge">Second derivative</span>
+              </div>
+              <canvas id="convexity-chart" height="180"></canvas>
+            </div>
+          </div>
+          <div class="card shadow-sm mt-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0">Price change vs. yield</h6>
                 <span class="badge">Relative delta</span>
               </div>
@@ -210,7 +228,7 @@
         `).join('');
       }
 
-      let curveChart, derivativeChart, priceChangeChart;
+      let curveChart, derivativeChart, durationChart, convexityChart, priceChangeChart;
       function toPoints(xs, ys) {
         const points = [];
         xs.forEach((x, idx) => {
@@ -223,11 +241,36 @@
         return points;
       }
 
-      function renderCharts(curve, derivative) {
+      function baseLineOptions(yLabel) {
+        return {
+          responsive: true,
+          parsing: false,
+          scales: {
+            x: {
+              type: 'linear',
+              title: { display: true, text: 'Yield to Maturity (%)', color: '#0f172a' },
+              ticks: { color: '#0f172a', callback: (value) => Number(value).toFixed(2) },
+              grid: { color: '#e2e8f0' },
+            },
+            y: {
+              title: { display: true, text: yLabel, color: '#0f172a' },
+              ticks: { color: '#0f172a' },
+              grid: { color: '#e2e8f0' },
+            }
+          },
+          plugins: { legend: { labels: { color: '#0f172a' } } }
+        };
+      }
+
+      function renderCharts(curve, derivative, modDuration, convexity) {
         const ctx = document.getElementById('curve-chart');
         const dctx = document.getElementById('derivative-chart');
+        const durctx = document.getElementById('duration-chart');
+        const cctx = document.getElementById('convexity-chart');
         const curvePoints = toPoints(curve.ytm, curve.price);
         const derivativePoints = toPoints(derivative.ytm, derivative.price_derivative);
+        const durationPoints = toPoints(modDuration.ytm, modDuration.modified_duration);
+        const convexityPoints = toPoints(convexity.ytm, convexity.convexity);
         const curveData = {
           datasets: [{
             label: 'Price',
@@ -248,24 +291,38 @@
             fill: true,
           }]
         };
-        const options = {
-          responsive: true,
-          parsing: false,
-          scales: {
-            x: {
-              type: 'linear',
-              title: { display: true, text: 'Yield to Maturity (%)', color: '#0f172a' },
-              ticks: { color: '#0f172a', callback: (value) => Number(value).toFixed(2) },
-              grid: { color: '#e2e8f0' },
-            },
-            y: { ticks: { color: '#0f172a' }, grid: { color: '#e2e8f0' } }
-          },
-          plugins: { legend: { labels: { color: '#0f172a' } } }
+        const durationData = {
+          datasets: [{
+            label: 'Modified duration',
+            data: durationPoints,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37,99,235,0.15)',
+            tension: 0.25,
+            fill: true,
+          }]
         };
+        const convexityData = {
+          datasets: [{
+            label: 'Convexity',
+            data: convexityPoints,
+            borderColor: '#7c3aed',
+            backgroundColor: 'rgba(124,58,237,0.12)',
+            tension: 0.25,
+            fill: true,
+          }]
+        };
+        const curveOptions = baseLineOptions('Price');
+        const derivativeOptions = baseLineOptions('Price sensitivity (ΔP/ΔYield)');
+        const durationOptions = baseLineOptions('Modified duration');
+        const convexityOptions = baseLineOptions('Convexity');
         if (curveChart) curveChart.destroy();
         if (derivativeChart) derivativeChart.destroy();
-        curveChart = new Chart(ctx, { type: 'line', data: curveData, options });
-        derivativeChart = new Chart(dctx, { type: 'line', data: derivativeData, options });
+        if (durationChart) durationChart.destroy();
+        if (convexityChart) convexityChart.destroy();
+        curveChart = new Chart(ctx, { type: 'line', data: curveData, options: curveOptions });
+        derivativeChart = new Chart(dctx, { type: 'line', data: derivativeData, options: derivativeOptions });
+        durationChart = new Chart(durctx, { type: 'line', data: durationData, options: durationOptions });
+        convexityChart = new Chart(cctx, { type: 'line', data: convexityData, options: convexityOptions });
       }
 
       function renderPriceChange(changeData) {
@@ -337,7 +394,7 @@
           }
           alertContainer.innerHTML = '';
           renderSummary(payload.summary);
-          renderCharts(payload.curve, payload.derivative);
+          renderCharts(payload.curve, payload.derivative, payload.modified_duration, payload.convexity);
           renderPriceChange(payload.price_change);
         } catch (err) {
           showAlert('Something went wrong while reaching the API.');
