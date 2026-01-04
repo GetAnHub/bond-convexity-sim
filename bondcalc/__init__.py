@@ -10,6 +10,8 @@ from .analytics import (
     generate_cash_flows,
 )
 from .plotting import (
+    calculate_convexity_curve,
+    calculate_modified_duration_curve,
     calculate_price_yield_derivative,
     calculate_ytm_range,
     generate_price_yield_curve,
@@ -32,5 +34,7 @@ __all__ = [
     "generate_price_yield_curve",
     "plot_price_yield_curve",
     "calculate_price_yield_derivative",
+    "calculate_modified_duration_curve",
+    "calculate_convexity_curve",
     "plot_price_yield_derivative",
 ]

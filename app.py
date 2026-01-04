@@ -9,7 +9,12 @@ from typing import Any, Dict, Optional, Tuple
 from flask import Flask, jsonify, render_template, request
 
 from bondcalc.analytics import calculate_accrued_interest, compute_periods
-from bondcalc.plotting import calculate_price_yield_derivative, generate_price_yield_curve
+from bondcalc.plotting import (
+    calculate_convexity_curve,
+    calculate_modified_duration_curve,
+    calculate_price_yield_derivative,
+    generate_price_yield_curve,
+)
 from bondcalc.pricing import bond_price, calculate_ytm
 
 app = Flask(__name__)
@@ -143,6 +148,8 @@ def _build_analysis(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
         num_points=num_points,
     )
     derivative = calculate_price_yield_derivative(curve)
+    modified_duration = calculate_modified_duration_curve(curve)
+    convexity = calculate_convexity_curve(curve)
 
     accrued_interest = calculate_accrued_interest(
         par_value,
@@ -181,6 +188,8 @@ def _build_analysis(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
         "summary": summary,
         "curve": curve.to_dict(orient="list"),
         "derivative": derivative.to_dict(orient="list"),
+        "modified_duration": modified_duration.to_dict(orient="list"),
+        "convexity": convexity.to_dict(orient="list"),
         "price_change": price_change,
     }
     return response, None
